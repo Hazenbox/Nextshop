@@ -14,8 +14,8 @@ Nextshop is an inventory and transaction management application built with React
 
 ### Prerequisites
 
-- Node.js (v16+)
-- npm or yarn
+- Node.js (v18.18.0 or higher)
+- npm (v8.0.0 or higher)
 - A Supabase account and project
 
 ### Installation
@@ -26,23 +26,109 @@ Nextshop is an inventory and transaction management application built with React
    cd Nextshop
    ```
 
-2. Install dependencies:
+2. Use the correct Node.js version:
    ```
-   npm install
-   # or
-   yarn
+   # If you have nvm installed
+   nvm use
    ```
 
-3. Set up environment variables:
+3. Install dependencies:
+   ```
+   npm install
+   # If you encounter dependency issues, use:
+   npm run reinstall
+   ```
+
+4. Set up environment variables:
    - Copy `.env.example` to `.env`
    - Update the Supabase URL and anon key with your own values from your Supabase project
 
-4. Start the development server:
+5. Start the development server:
    ```
    npm run dev
-   # or
-   yarn dev
    ```
+
+### Development Scripts
+
+- `npm run dev` - Start the development server
+- `npm run build` - Build the production version
+- `npm run lint` - Check for linting errors
+- `npm run lint:fix` - Automatically fix linting errors
+- `npm run format` - Format code with Prettier
+- `npm run clean` - Remove node_modules and dist directories
+- `npm run reinstall` - Clean and reinstall dependencies
+- `npm run deploy` - Deploy to GitHub Pages
+
+## Development Workflow
+
+### GitHub Codespaces / Dev Containers
+
+This project supports GitHub Codespaces and VS Code Dev Containers for consistent development environments:
+
+1. In GitHub, click the "Code" button and select "Open with Codespaces"
+2. In VS Code, install the Dev Containers extension, press F1 and select "Dev Containers: Open Folder in Container"
+
+The container includes:
+- Node.js 18.18.0
+- npm
+- Git LFS
+- VS Code extensions for ESLint, Prettier, and GitHub integration
+
+### CI/CD Pipeline
+
+The project uses GitHub Actions for continuous integration and deployment:
+
+- Every push to the `main` branch triggers a build and test workflow
+- If tests pass, the application is automatically deployed to GitHub Pages
+- Pull requests are also built and tested before merging
+
+### Development Mode
+
+For local development without Supabase integration:
+
+1. Set `DEV_MODE=true` in your `.env` file
+2. This enables simulated authentication and database operations
+3. You can work on UI and functionality without actual API calls
+
+### Working with Branches
+
+1. Create feature branches for new work:
+   ```
+   git checkout -b feature/your-feature-name
+   ```
+
+2. Keep your branch up to date:
+   ```
+   git pull origin main
+   ```
+
+3. Submit pull requests to the `develop` branch for review before merging to `main`
+
+## Contribution Guidelines
+
+### Code Style
+
+- Follow the ESLint and Prettier configurations
+- Run `npm run lint` and `npm run format` before committing
+- Use TypeScript for type safety
+
+### Pull Request Process
+
+1. Create a feature branch from `develop`
+2. Make your changes and test locally
+3. Ensure all CI checks pass
+4. Submit a PR to merge into `develop`
+5. Request review from maintainers
+
+### Commit Messages
+
+Follow the conventional commits format:
+- `feat:` for new features
+- `fix:` for bug fixes
+- `docs:` for documentation changes
+- `chore:` for maintenance tasks
+- `refactor:` for code refactoring
+- `test:` for adding tests
 
 ## Supabase Setup
 
@@ -278,3 +364,27 @@ Detailed documentation is available to help you get started and make the most of
 - [Getting Started Guide](./docs/getting-started.md) - Step-by-step instructions for installation and setup
 - [API Reference](./docs/api-reference.md) - Complete API documentation for database interactions
 - [Component Reference](./docs/components.md) - Overview of available UI components and their usage
+
+## Troubleshooting
+
+### Node.js Version Issues
+
+If you encounter errors about Node.js version compatibility:
+1. Install the required Node.js version (18.18.0 or higher)
+2. Run `npm run reinstall` to clean and reinstall dependencies
+
+### Build Errors
+
+For Rollup or other build errors:
+1. Try `npm run clean` to remove build artifacts
+2. Run `npm run reinstall` to reinstall dependencies with legacy peer deps
+3. Check for missing or conflicting packages in the error logs
+
+### ESLint Errors
+
+1. Run `npm run lint:fix` to automatically fix most linting issues
+2. For persistent errors, check the ESLint configuration and rules
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

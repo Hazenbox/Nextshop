@@ -1,16 +1,25 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "nextshop",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "type": "module",
   "homepage": "https://hazenbox.github.io/Nextshop",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint . --ext ts,tsx --fix",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "clean": "rm -rf node_modules dist",
+    "reinstall": "npm run clean && npm install --legacy-peer-deps",
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "prepare": "[ -d .git ] && git lfs install || true"
+  },
+  "engines": {
+    "node": ">=18.18.0",
+    "npm": ">=8.0.0"
   },
   "dependencies": {
     "@mui/icons-material": "^6.4.8",
@@ -40,6 +49,7 @@
     "gh-pages": "^6.3.0",
     "globals": "^15.9.0",
     "postcss": "^8.4.35",
+    "prettier": "^3.2.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",

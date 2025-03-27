@@ -316,38 +316,50 @@ export function TransactionsPage() {
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>
+              <TableCell 
+                sortDirection={orderBy === 'date' ? order : false}
+                onClick={() => handleRequestSort('date')}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableSortLabel
                   active={orderBy === 'date'}
                   direction={orderBy === 'date' ? order : 'asc'}
-                  onClick={() => handleRequestSort('date')}
                 >
                   Date
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell 
+                sortDirection={orderBy === 'type' ? order : false}
+                onClick={() => handleRequestSort('type')}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableSortLabel
                   active={orderBy === 'type'}
                   direction={orderBy === 'type' ? order : 'asc'}
-                  onClick={() => handleRequestSort('type')}
                 >
                   Type
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell 
+                sortDirection={orderBy === 'amount' ? order : false}
+                onClick={() => handleRequestSort('amount')}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableSortLabel
                   active={orderBy === 'amount'}
                   direction={orderBy === 'amount' ? order : 'asc'}
-                  onClick={() => handleRequestSort('amount')}
                 >
                   Amount
                 </TableSortLabel>
               </TableCell>
-              <TableCell>
+              <TableCell 
+                sortDirection={orderBy === 'payment_mode' ? order : false}
+                onClick={() => handleRequestSort('payment_mode')}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableSortLabel
                   active={orderBy === 'payment_mode'}
                   direction={orderBy === 'payment_mode' ? order : 'asc'}
-                  onClick={() => handleRequestSort('payment_mode')}
                 >
                   Payment Mode
                 </TableSortLabel>
