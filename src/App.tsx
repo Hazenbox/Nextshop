@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { Inventory2Page } from './pages/Inventory2Page';
@@ -8,12 +8,29 @@ import { AnalyticsPage } from './pages/AnalyticsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import UIDemo from './pages/UIDemo';
+import Login from './pages/auth/Login';
+import Signup from './pages/auth/Signup';
+import ForgotPassword from './pages/auth/ForgotPassword';
+import ResetPassword from './pages/auth/ResetPassword';
+import AuthCallback from './pages/auth/Callback';
 import { SideSheetContext } from './components/Layout';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // Import CSS
 import './index.css';
 
-function App() {
+// Protected route component
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { user } = useAuth();
+  
+  if (!user) {
+    return <Navigate to="/auth/login" replace />;
+  }
+  
+  return <>{children}</>;
+};
+
+function AppRoutes() {
   // Side sheet states
   const [isInventorySideSheetOpen, setInventorySideSheetOpen] = useState(false);
   const [isTransactionSideSheetOpen, setTransactionSideSheetOpen] = useState(false);
@@ -28,19 +45,37 @@ function App() {
 
   return (
     <SideSheetContext.Provider value={sideSheetContextValue}>
-      <Router>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/inventory2" element={<Inventory2Page />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/ui-demo" element={<UIDemo />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Router>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/auth/login" element={<Login />} />
+        <Route path="/auth/signup" element={<Signup />} />
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        
+        {/* Protected routes */}
+        <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
+        <Route path="/inventory2" element={<ProtectedRoute><Inventory2Page /></ProtectedRoute>} />
+        <Route path="/transactions" element={<ProtectedRoute><TransactionsPage /></ProtectedRoute>} />
+        <Route path="/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/ui-demo" element={<ProtectedRoute><UIDemo /></ProtectedRoute>} />
+        
+        {/* 404 route */}
+        <Route path="*" element={<NotFoundPage />} />
+      </Routes>
     </SideSheetContext.Provider>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <Router>
+        <AppRoutes />
+      </Router>
+    </AuthProvider>
   );
 }
 

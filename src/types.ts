@@ -80,12 +80,52 @@ export interface TransactionInput {
 
 export interface Transaction {
   id: string;
-  date: Date;
+  date: string;
   type: 'income' | 'expense';
   amount: number;
   payment_mode: string;
   reference?: string;
   notes?: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Profile {
+  id: string;
+  email: string | null;
+  business_name: string | null;
+  phone: string | null;
+  address: string | null;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TransactionItem {
+  id: string;
+  transaction_id: string;
+  item_id: string | null;
+  quantity: number;
+  price: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ItemMedia {
+  id: string;
+  item_id: string;
+  type: 'image' | 'video';
+  url: string;
+  storage_path: string | null;
   created_at: string;
   updated_at: string;
 }
