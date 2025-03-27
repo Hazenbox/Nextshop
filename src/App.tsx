@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage } from './pages/HomePage';
 import { InventoryPage } from './pages/InventoryPage';
 import { Inventory2Page } from './pages/Inventory2Page';

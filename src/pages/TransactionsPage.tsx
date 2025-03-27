@@ -1,31 +1,68 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout } from '../components/Layout';
-import { Plus, Download, Edit, Trash2, Eye, Search, X, ChevronDown, Check, Filter, ArrowUpRight, ArrowDownLeft, Calendar } from 'lucide-react';
 import { transactionService, mockTransactions } from '../lib/supabase';
 import { Transaction } from '../types';
 import { AddTransactionSideSheet } from '../components/AddTransactionSideSheet';
-import { ResponsiveView, DataCard } from '../components/ResponsiveView';
+
+// Material UI imports
+import {
+  Box,
+  Typography,
+  Paper,
+  Grid,
+  TableContainer,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableSortLabel,
+  TextField,
+  InputAdornment,
+  Button,
+  IconButton,
+  Chip,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  Card,
+  CardContent,
+  Divider,
+  CircularProgress,
+  Tooltip,
+  useMediaQuery,
+  useTheme
+} from '@mui/material';
+
+// Material UI icons
+import {
+  Add as AddIcon,
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  FilterList as FilterIcon,
+  ArrowDownward as ArrowDownwardIcon,
+  ArrowUpward as ArrowUpwardIcon,
+  Download as DownloadIcon,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  CalendarToday as CalendarIcon
+} from '@mui/icons-material';
 
 export function TransactionsPage() {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<'all' | 'income' | 'expense'>('all');
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchFocused, setSearchFocused] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isTransactionSideSheetOpen, setIsTransactionSideSheetOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  
+  // Sort state
+  const [orderBy, setOrderBy] = useState<keyof Transaction>('date');
+  const [order, setOrder] = useState<'asc' | 'desc'>('desc');
 
   useEffect(() => {
     const loadTransactions = async () => {
@@ -46,24 +83,11 @@ export function TransactionsPage() {
     loadTransactions();
   }, []);
 
-  // Click outside handler to close the menu
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setMenuOpen(false);
-      }
-    }
-
-    // Add event listener when menu is open
-    if (menuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    
-    // Clean up the event listener
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [menuOpen]);
+  const handleRequestSort = (property: keyof Transaction) => {
+    const isAsc = orderBy === property && order === 'asc';
+    setOrder(isAsc ? 'desc' : 'asc');
+    setOrderBy(property);
+  };
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
@@ -79,13 +103,8 @@ export function TransactionsPage() {
 
   const handleEdit = (transaction: Transaction) => {
     // Open the side sheet for editing the transaction
-    // In a real implementation, we would set the transaction to edit
     console.log('Edit transaction:', transaction);
     setIsTransactionSideSheetOpen(true);
-  };
-
-  const clearSearch = () => {
-    setSearchTerm('');
   };
 
   const handleExport = () => {
@@ -123,368 +142,474 @@ export function TransactionsPage() {
   };
 
   // Filter and sort transactions
-  const filteredTransactions = transactions
-    .filter(tx => {
-      if (selectedType !== 'all' && tx.type !== selectedType) {
-        return false;
-      }
-      
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        const amount = tx.amount.toString();
-        const date = new Date(tx.date).toLocaleDateString();
-        const paymentMode = tx.payment_mode.toLowerCase();
-        const reference = tx.reference?.toLowerCase() || '';
-        const notes = tx.notes?.toLowerCase() || '';
+  const sortedTransactions = React.useMemo(() => {
+    const filtered = transactions
+      .filter(tx => {
+        if (selectedType !== 'all' && tx.type !== selectedType) {
+          return false;
+        }
         
-        return (
-          amount.includes(searchLower) ||
-          date.includes(searchLower) ||
-          paymentMode.includes(searchLower) ||
-          reference.includes(searchLower) ||
-          notes.includes(searchLower)
-        );
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          const amount = tx.amount.toString();
+          const date = new Date(tx.date).toLocaleDateString();
+          const paymentMode = tx.payment_mode.toLowerCase();
+          const reference = tx.reference?.toLowerCase() || '';
+          const notes = tx.notes?.toLowerCase() || '';
+          
+          return (
+            amount.includes(searchLower) ||
+            date.includes(searchLower) ||
+            paymentMode.includes(searchLower) ||
+            reference.includes(searchLower) ||
+            notes.includes(searchLower)
+          );
+        }
+        
+        return true;
+      });
+    
+    return filtered.sort((a, b) => {
+      const aValue = a[orderBy];
+      const bValue = b[orderBy];
+      
+      if (orderBy === 'date') {
+        return (order === 'asc' ? 1 : -1) * 
+          (new Date(a.date).getTime() - new Date(b.date).getTime());
       }
       
-      return true;
-    })
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        return (order === 'asc' ? 1 : -1) * aValue.localeCompare(bValue);
+      }
+      
+      // For numbers
+      if (aValue !== null && bValue !== null) {
+        return (order === 'asc' ? 1 : -1) * 
+          ((aValue as number) - (bValue as number));
+      }
+      
+      return 0;
+    });
+  }, [transactions, selectedType, searchTerm, orderBy, order]);
 
   // Calculate totals
-  const totalIncome = filteredTransactions
+  const totalIncome = sortedTransactions
     .filter(tx => tx.type === 'income')
     .reduce((sum, tx) => sum + tx.amount, 0);
     
-  const totalExpense = filteredTransactions
+  const totalExpense = sortedTransactions
     .filter(tx => tx.type === 'expense')
     .reduce((sum, tx) => sum + tx.amount, 0);
     
   const netAmount = totalIncome - totalExpense;
 
-  // Render transaction cards for mobile view
+  // Mobile view: Transaction cards
   const renderTransactionCards = () => {
     return (
-      <div className="grid grid-cols-1 gap-3 p-4">
-        {filteredTransactions.map(transaction => (
-          <div 
-            key={transaction.id} 
-            className="bg-surface rounded-lg p-4 border border-outline/5 shadow-sm"
-          >
-            <div className="flex justify-between items-start mb-2">
-              <div className="flex items-center">
-                <div className={`mr-3 p-2 rounded-full ${
-                  transaction.type === 'income' 
-                    ? 'bg-primary-container' 
-                    : 'bg-error-container'
-                }`}>
-                  {transaction.type === 'income' ? (
-                    <ArrowUpRight className={`h-5 w-5 text-on-primary-container`} />
-                  ) : (
-                    <ArrowDownLeft className={`h-5 w-5 text-on-error-container`} />
+      <Box sx={{ p: 2 }}>
+        <Grid container spacing={2}>
+          {sortedTransactions.map((transaction: Transaction) => (
+            <Grid item xs={12} key={transaction.id}>
+              <Card sx={{ 
+                boxShadow: theme.shadows[1],
+                borderRadius: 2
+              }}>
+                <CardContent>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                      <Box sx={{ 
+                        mr: 1.5, 
+                        bgcolor: transaction.type === 'income' ? 'primary.100' : 'error.100',
+                        color: transaction.type === 'income' ? 'primary.main' : 'error.main',
+                        borderRadius: '50%',
+                        width: 40,
+                        height: 40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}>
+                        {transaction.type === 'income' 
+                          ? <ArrowUpwardIcon /> 
+                          : <ArrowDownwardIcon />}
+                      </Box>
+                      <Box>
+                        <Typography variant="body1" fontWeight="medium">
+                          {transaction.type === 'income' ? 'Income' : 'Expense'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {transaction.payment_mode}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography 
+                      variant="body1" 
+                      fontWeight="medium"
+                      color={transaction.type === 'income' ? 'primary.main' : 'error.main'}
+                    >
+                      ₹{transaction.amount.toLocaleString()}
+                    </Typography>
+                  </Box>
+                  
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                    <CalendarIcon sx={{ fontSize: 14, mr: 0.5, color: 'text.secondary' }} />
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(transaction.date).toLocaleDateString('en-US', {
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric'
+                      })}
+                    </Typography>
+                  </Box>
+                  
+                  {(transaction.reference || transaction.notes) && (
+                    <>
+                      <Divider sx={{ my: 1 }} />
+                      <Box sx={{ mt: 1 }}>
+                        {transaction.reference && (
+                          <Typography variant="body2" color="text.secondary">
+                            <Typography component="span" fontWeight="medium">Reference:</Typography> {transaction.reference}
+                          </Typography>
+                        )}
+                        {transaction.notes && (
+                          <Typography variant="body2" color="text.secondary">
+                            <Typography component="span" fontWeight="medium">Notes:</Typography> {transaction.notes}
+                          </Typography>
+                        )}
+                      </Box>
+                    </>
                   )}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-on-surface">
-                    {transaction.type === 'income' ? 'Income' : 'Expense'}
-                  </p>
-                  <p className="text-xs text-on-surface-variant">{transaction.payment_mode}</p>
-                </div>
-              </div>
-              <span className={`text-sm font-medium ${
-                transaction.type === 'income' ? 'text-primary' : 'text-error'
-              }`}>
-                ₹{transaction.amount.toLocaleString()}
-              </span>
-            </div>
-            
-            <div className="text-xs text-on-surface-variant mb-2 flex items-center">
-              <Calendar size={14} className="mr-1" />
-              {new Date(transaction.date).toLocaleDateString('en-US', {
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric'
-              })}
-            </div>
-            
-            {(transaction.reference || transaction.notes) && (
-              <div className="text-xs text-on-surface-variant mt-2 pt-2 border-t border-outline/10">
-                {transaction.reference && (
-                  <p><span className="font-medium">Reference:</span> {transaction.reference}</p>
-                )}
-                {transaction.notes && (
-                  <p><span className="font-medium">Notes:</span> {transaction.notes}</p>
-                )}
-              </div>
-            )}
-            
-            <div className="flex justify-end mt-3 pt-2 border-t border-outline/10">
-              <button
-                onClick={() => handleEdit(transaction)}
-                className="p-1.5 rounded-full text-primary hover:bg-primary/5"
-                aria-label="Edit transaction"
-              >
-                <Edit size={18} />
-              </button>
-              <button
-                onClick={() => handleDelete(transaction.id)}
-                className="p-1.5 rounded-full text-error hover:bg-error/5 ml-2"
-                aria-label="Delete transaction"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+                  
+                  <Divider sx={{ my: 1 }} />
+                  <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <Tooltip title="Edit">
+                      <IconButton 
+                        size="small" 
+                        color="primary" 
+                        onClick={() => handleEdit(transaction)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton 
+                        size="small" 
+                        color="error"
+                        onClick={() => handleDelete(transaction.id)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Box>
     );
   };
 
-  // Render transaction table for desktop view
+  // Desktop view: Transaction table
   const renderTransactionTable = () => {
     return (
-      <div className="overflow-x-auto">
-        <table className="w-full border-collapse">
-          <thead>
-            <tr className="border-b border-outline/10 bg-surface-container-low">
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">
-                <div className="flex items-center">
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'date'}
+                  direction={orderBy === 'date' ? order : 'asc'}
+                  onClick={() => handleRequestSort('date')}
+                >
                   Date
-                  <ChevronDown size={14} className="ml-1 opacity-50" />
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">
-                <div className="flex items-center">
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'type'}
+                  direction={orderBy === 'type' ? order : 'asc'}
+                  onClick={() => handleRequestSort('type')}
+                >
                   Type
-                  <ChevronDown size={14} className="ml-1 opacity-50" />
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">
-                <div className="flex items-center">
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'amount'}
+                  direction={orderBy === 'amount' ? order : 'asc'}
+                  onClick={() => handleRequestSort('amount')}
+                >
                   Amount
-                  <ChevronDown size={14} className="ml-1 opacity-50" />
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">
-                <div className="flex items-center">
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>
+                <TableSortLabel
+                  active={orderBy === 'payment_mode'}
+                  direction={orderBy === 'payment_mode' ? order : 'asc'}
+                  onClick={() => handleRequestSort('payment_mode')}
+                >
                   Payment Mode
-                  <ChevronDown size={14} className="ml-1 opacity-50" />
-                </div>
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">Reference</th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">Notes</th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-on-surface-variant whitespace-nowrap">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredTransactions.map(transaction => (
-              <tr key={transaction.id} className="border-b border-outline/10 hover:bg-surface-container-lowest transition-colors">
-                <td className="py-3 px-4 whitespace-nowrap text-sm text-on-surface-variant">
+                </TableSortLabel>
+              </TableCell>
+              <TableCell>Reference</TableCell>
+              <TableCell>Notes</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {sortedTransactions.map((transaction: Transaction) => (
+              <TableRow key={transaction.id} hover>
+                <TableCell>
                   {new Date(transaction.date).toLocaleDateString('en-US', {
                     year: 'numeric', 
                     month: 'short', 
                     day: 'numeric'
                   })}
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap">
-                  <span className={`px-2.5 py-1 inline-flex text-xs leading-5 font-medium rounded-full ${
-                    transaction.type === 'income' 
-                      ? 'bg-primary-container text-on-primary-container' 
-                      : 'bg-error-container text-on-error-container'
-                  }`}>
-                    {transaction.type === 'income' ? 'Income' : 'Expense'}
-                  </span>
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap text-sm font-medium">
-                  <span className={transaction.type === 'income' ? 'text-primary' : 'text-error'}>
+                </TableCell>
+                <TableCell>
+                  <Chip 
+                    label={transaction.type === 'income' ? 'Income' : 'Expense'}
+                    color={transaction.type === 'income' ? 'primary' : 'error'}
+                    size="small"
+                    variant="outlined"
+                  />
+                </TableCell>
+                <TableCell>
+                  <Typography
+                    color={transaction.type === 'income' ? 'primary.main' : 'error.main'}
+                    fontWeight="medium"
+                  >
                     ₹{transaction.amount.toLocaleString()}
-                  </span>
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap text-sm text-on-surface">
-                  {transaction.payment_mode}
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap text-sm text-on-surface">
-                  {transaction.reference || '—'}
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap text-sm text-on-surface max-w-xs truncate">
-                  {transaction.notes || '—'}
-                </td>
-                <td className="py-3 px-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <button
-                      onClick={() => handleEdit(transaction)}
-                      className="p-1.5 rounded-full text-primary hover:bg-primary/5 mr-1"
-                      aria-label="Edit transaction"
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(transaction.id)}
-                      className="p-1.5 rounded-full text-error hover:bg-error/5"
-                      aria-label="Delete transaction"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </td>
-              </tr>
+                  </Typography>
+                </TableCell>
+                <TableCell>{transaction.payment_mode}</TableCell>
+                <TableCell>{transaction.reference || '—'}</TableCell>
+                <TableCell sx={{ maxWidth: 200 }}>
+                  <Typography noWrap title={transaction.notes || '—'}>
+                    {transaction.notes || '—'}
+                  </Typography>
+                </TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex' }}>
+                    <Tooltip title="Edit">
+                      <IconButton 
+                        size="small" 
+                        color="primary" 
+                        onClick={() => handleEdit(transaction)}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton 
+                        size="small" 
+                        color="error"
+                        onClick={() => handleDelete(transaction.id)}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </TableBody>
+        </Table>
+      </TableContainer>
     );
   };
 
   return (
     <Layout>
-      <div className="p-4 sm:p-6 bg-background min-h-screen">
+      <Box sx={{ p: { xs: 2, sm: 3 } }}>
         {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-medium text-on-surface mb-2">Transactions</h1>
-          <p className="text-on-surface-variant">Manage your income and expenses, and track your financial activity.</p>
-        </div>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" gutterBottom>Transactions</Typography>
+          <Typography variant="body1" color="text.secondary">
+            Manage your income and expenses, and track your financial activity.
+          </Typography>
+        </Box>
         
         {/* Summary cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-surface p-4 rounded-xl shadow-sm border border-outline/5">
-            <h3 className="text-sm font-medium text-on-surface-variant mb-1">Income</h3>
-            <p className="text-2xl font-medium text-primary flex items-center">
-              <ArrowUpRight size={20} className="mr-2" />
-              ₹{totalIncome.toLocaleString()}
-            </p>
-          </div>
+        <Grid container spacing={2} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={1}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Income
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ 
+                  bgcolor: 'primary.100',
+                  color: 'primary.main',
+                  borderRadius: '50%',
+                  p: 0.5,
+                  mr: 1,
+                  display: 'flex'
+                }}>
+                  <ArrowUpwardIcon />
+                </Box>
+                <Typography variant="h5" color="primary.main">
+                  ₹{totalIncome.toLocaleString()}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
           
-          <div className="bg-surface p-4 rounded-xl shadow-sm border border-outline/5">
-            <h3 className="text-sm font-medium text-on-surface-variant mb-1">Expense</h3>
-            <p className="text-2xl font-medium text-error flex items-center">
-              <ArrowDownLeft size={20} className="mr-2" />
-              ₹{totalExpense.toLocaleString()}
-            </p>
-          </div>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={1}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Expense
+              </Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <Box sx={{ 
+                  bgcolor: 'error.100',
+                  color: 'error.main',
+                  borderRadius: '50%',
+                  p: 0.5,
+                  mr: 1,
+                  display: 'flex'
+                }}>
+                  <ArrowDownwardIcon />
+                </Box>
+                <Typography variant="h5" color="error.main">
+                  ₹{totalExpense.toLocaleString()}
+                </Typography>
+              </Box>
+            </Paper>
+          </Grid>
           
-          <div className="bg-surface p-4 rounded-xl shadow-sm border border-outline/5">
-            <h3 className="text-sm font-medium text-on-surface-variant mb-1">Net Balance</h3>
-            <p className={`text-2xl font-medium ${netAmount >= 0 ? 'text-primary' : 'text-error'}`}>
-              ₹{netAmount.toLocaleString()}
-            </p>
-          </div>
-        </div>
+          <Grid item xs={12} md={4}>
+            <Paper sx={{ p: 2, borderRadius: 2 }} elevation={1}>
+              <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                Net Balance
+              </Typography>
+              <Typography 
+                variant="h5" 
+                color={netAmount >= 0 ? 'primary.main' : 'error.main'}
+              >
+                ₹{netAmount.toLocaleString()}
+              </Typography>
+            </Paper>
+          </Grid>
+        </Grid>
         
         {/* Filters and Actions Row */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="flex-1 flex gap-3">
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: 2,
+          mb: 3
+        }}>
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: 2, 
+            flex: 1 
+          }}>
             {/* Search Input */}
-            <div className="relative flex-1 max-w-md">
-              <input
-                type="text"
-                placeholder="Search transactions..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-outline/20 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-              />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" size={18} />
-              {searchTerm && (
-                <button 
-                  onClick={clearSearch}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface"
-                >
-                  <X size={18} />
-                </button>
-              )}
-            </div>
+            <TextField
+              placeholder="Search transactions..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              variant="outlined"
+              fullWidth
+              sx={{ maxWidth: { sm: 400 } }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm ? (
+                  <InputAdornment position="end">
+                    <IconButton 
+                      edge="end" 
+                      onClick={() => setSearchTerm('')}
+                      size="small"
+                    >
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ) : null
+              }}
+            />
 
             {/* Type Filter */}
-            <div className="relative w-48" ref={menuRef}>
-              <button
-                type="button"
-                onClick={() => setMenuOpen(!menuOpen)}
-                className="w-full appearance-none pl-4 pr-10 py-2.5 rounded-lg border border-outline/20 bg-surface text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30 flex justify-between items-center"
+            <FormControl sx={{ minWidth: 150 }}>
+              <InputLabel id="transaction-type-label">Type</InputLabel>
+              <Select
+                labelId="transaction-type-label"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value as 'all' | 'income' | 'expense')}
+                label="Type"
               >
-                <span>
-                  {selectedType === 'all' ? 'All Types' : 
-                   selectedType === 'income' ? 'Income' : 'Expense'}
-                </span>
-                <ChevronDown size={18} className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none" />
-              </button>
-              
-              {menuOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-surface rounded-lg shadow-lg border border-outline/10 z-10 overflow-hidden">
-                  {['all', 'income', 'expense'].map(type => (
-                    <button
-                      key={type}
-                      onClick={() => {
-                        setSelectedType(type as any);
-                        setMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-sm ${
-                        selectedType === type
-                          ? 'bg-secondary-container text-on-secondary-container'
-                          : 'text-on-surface hover:bg-surface-container'
-                      }`}
-                    >
-                      {type === 'all' ? 'All Types' : 
-                       type === 'income' ? 'Income' : 'Expense'}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+                <MenuItem value="all">All Types</MenuItem>
+                <MenuItem value="income">Income</MenuItem>
+                <MenuItem value="expense">Expense</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
 
           {/* Action Buttons */}
-          <div className="flex gap-3">
-            <button 
-              className="px-4 py-2.5 flex items-center gap-2 rounded-lg border border-outline/20 bg-surface text-on-surface hover:bg-surface-container-high"
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2, 
+            justifyContent: { xs: 'flex-start', md: 'flex-end' }
+          }}>
+            <Button 
+              variant="outlined" 
+              startIcon={<DownloadIcon />}
               onClick={handleExport}
             >
-              <Download size={18} />
-              <span>Export</span>
-            </button>
-            <button 
-              className="px-4 py-2.5 flex items-center gap-2 rounded-lg bg-primary text-on-primary hover:bg-primary/90"
+              Export
+            </Button>
+            <Button 
+              variant="contained" 
+              startIcon={<AddIcon />}
               onClick={() => setIsTransactionSideSheetOpen(true)}
+              color="primary"
             >
-              <Plus size={18} />
-              <span>Add Transaction</span>
-            </button>
-          </div>
-        </div>
+              Add Transaction
+            </Button>
+          </Box>
+        </Box>
         
         {/* Main Content */}
-        <div className="bg-surface rounded-xl overflow-hidden border border-outline/10 shadow-sm">
+        <Paper sx={{ borderRadius: 2, overflow: 'hidden' }} elevation={1}>
           {loading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="animate-spin h-8 w-8 border-2 border-primary/20 rounded-full border-t-primary"></div>
-            </div>
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 8 }}>
+              <CircularProgress />
+            </Box>
           ) : error ? (
-            <div className="flex items-center justify-center h-64 text-error">
-              <p>{error}</p>
-            </div>
-          ) : filteredTransactions.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-64 text-on-surface-variant">
-              <p className="mb-2">No transactions found.</p>
-              <p>Try adjusting your filters or add a new transaction.</p>
-            </div>
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 8, color: 'error.main' }}>
+              <Typography color="inherit">{error}</Typography>
+            </Box>
+          ) : sortedTransactions.length === 0 ? (
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              alignItems: 'center', 
+              justifyContent: 'center', 
+              p: 8,
+              color: 'text.secondary'
+            }}>
+              <Typography gutterBottom>No transactions found.</Typography>
+              <Typography>Try adjusting your filters or add a new transaction.</Typography>
+            </Box>
           ) : (
             <>
-              {/* Desktop view */}
-              <div className="hidden md:block">
-                {renderTransactionTable()}
-              </div>
-              
-              {/* Mobile view */}
-              <div className="md:hidden">
-                {renderTransactionCards()}
-              </div>
+              {isMobile ? renderTransactionCards() : renderTransactionTable()}
             </>
           )}
-        </div>
+        </Paper>
         
         {/* Transaction Side Sheet */}
         <AddTransactionSideSheet
           isOpen={isTransactionSideSheetOpen}
           onClose={() => setIsTransactionSideSheetOpen(false)}
         />
-      </div>
+      </Box>
     </Layout>
   );
 }
